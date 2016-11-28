@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context="com.example.shirin.navdrawe_1.MainActivity">
+
+    <android.support.design.widget.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/AppTheme.AppBarOverlay">
+
+    </android.support.design.widget.AppBarLayout>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/fab_margin" app:srcCompat="@android:drawable/ic_input_add"
+        app:backgroundTint="@android:color/holo_red_dark"
+        android:tint="@android:color/white" />
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        app:popupTheme="@style/AppTheme.PopupOverlay"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true" />
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context="com.example.shirin.navdrawe_1.MainFragment"
+        android:paddingTop="10dp">
+
+
+        <Button
+            android:text="Total Income: "
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="162dp"
+            android:id="@+id/btnInc"
+            android:layout_alignStart="@+id/btnBalance"
+            style="@android:style/Widget.Button" />
+
+        <Button
+            android:text="Total Expense: "
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnexp"
+            style="@android:style/Widget.Button"
+            android:layout_marginTop="19dp"
+            android:layout_below="@+id/btnInc"
+            android:layout_centerHorizontal="true" />
+
+        <Button
+            android:text="Total Balance: "
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnBalance"
+            style="@android:style/Widget.Button"
+            android:layout_alignBottom="@+id/btnInc"
+            android:layout_alignParentStart="true"
+            android:layout_marginBottom="76dp" />
+
+        <Button
+            android:text="View Trends Over Time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/btnexp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="86dp"
+            android:id="@+id/btnGotoBar"
+            style="@android:style/Widget.Button" />
+
+        <Button
+            android:text="View Trends by Category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnPie"
+            style="@android:style/Widget.Button"
+            android:layout_marginTop="33dp"
+            android:layout_below="@+id/btnGotoBar"
+            android:layout_alignParentStart="true" />
+
+
+    </RelativeLayout>
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/fragment_container"/>
+
+
+</android.support.design.widget.CoordinatorLayout>
+
+
+

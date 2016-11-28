@@ -1,0 +1,100 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.shirin.navdrawe_1.AddTransactionFragment"
+    android:orientation="vertical"
+    android:paddingTop="50dp"
+    android:paddingLeft="30dp"
+    android:paddingRight="30dp"
+    android:weightSum="1">
+
+    <!--Description label-->
+    <android.support.design.widget.TextInputLayout
+        android:id="@+id/text_input_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/text_input_layout"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="20dp">
+        <EditText
+            android:id="@+id/txtDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Description"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="20dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true" />
+    </android.support.design.widget.TextInputLayout>
+
+    <!--Amount label-->
+    <android.support.design.widget.TextInputLayout
+        android:id="@+id/text_input_layout1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true">
+        <EditText
+            android:id="@+id/txtAmt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Amount"
+            android:layout_below="@+id/txtDesc"
+            android:layout_marginTop="40dp" />
+
+    </android.support.design.widget.TextInputLayout>
+    <Spinner
+        android:layout_height="wrap_content"
+        android:id="@+id/spinnerType"
+        android:layout_marginEnd="41dp"
+        android:layout_width="match_parent"
+        android:layout_below="@+id/text_input_layout1"
+        android:layout_alignEnd="@+id/text_input_layout1"
+        android:layout_marginTop="28dp"
+        android:layout_weight="0.02"
+        android:entries="@array/transaction_type" />
+
+    <Spinner
+        android:layout_height="wrap_content"
+        android:id="@+id/spinnerCatInc"
+        android:layout_marginEnd="41dp"
+        android:layout_width="match_parent"
+        android:layout_below="@+id/text_input_layout1"
+        android:layout_alignEnd="@+id/text_input_layout1"
+        android:layout_marginTop="28dp"
+        android:layout_weight="0.02"
+        android:entries="@array/Income_List"/>
+
+    <Spinner
+        android:layout_height="wrap_content"
+        android:id="@+id/spinnerCatExp"
+        android:layout_marginEnd="41dp"
+        android:layout_width="match_parent"
+        android:layout_below="@+id/text_input_layout1"
+        android:layout_alignEnd="@+id/text_input_layout1"
+        android:layout_marginTop="28dp"
+        android:layout_weight="0.02"
+        android:entries="@array/Expense_List"/>
+
+    <EditText
+        style="?android:attr/spinnerStyle"
+        android:layout_width="288dp"
+        android:layout_height="wrap_content"
+        android:inputType="none"
+        android:clickable="true"
+        android:focusable="false"
+        android:hint="Date"
+        android:textSize="20dp"
+        android:id="@+id/txtDate"
+        android:ems="10"
+        android:layout_marginTop="28dp" />
+
+    <Button
+        android:text="Add Transaction"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/buttonAdd"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="60dp" />
+
+</LinearLayout>
