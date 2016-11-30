@@ -360,7 +360,7 @@ public class AddTransactionFragment extends Fragment {
 }**/
 //use for set callback and set Arguments
 @SuppressLint("ValidFragment")
-class DatePickerFragment extends DialogFragment {
+public static class DatePickerFragment extends DialogFragment {
         DatePickerDialog.OnDateSetListener ondateSet;
         private int year, month, day;
 
