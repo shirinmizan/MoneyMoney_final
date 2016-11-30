@@ -99,9 +99,6 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             });
 
-       //email = (EditText) findViewById(R.id.txtEmail);
-        //pass = (EditText) findViewById(R.id.txtPass);
-        //btn = (Button)findViewById(R.id.button);
     }
 
     @Override
@@ -139,12 +136,4 @@ public class LoginActivity extends AppCompatActivity {
             Toast.makeText(LoginActivity.this, "Log In - Error Occurred", Toast.LENGTH_SHORT).show();
         }
     };
-
-   /** public void login(View v){
-        eMail = email.getText().toString();
-        Intent intent = new Intent(LoginActivity.this,MainActivity.class);
-        intent.putExtra("EMAIL", eMail);
-        startActivity(intent);
-    }**/
-
 }
