@@ -19,6 +19,9 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.auth0.android.Auth0;
+import com.example.shirin.navdrawe_1.utils.CredentialsManager;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -57,10 +60,15 @@ public class MainActivity extends AppCompatActivity
     private static final String TAG_DATE = "date";
     private static final String TAG_SUCCESS = "success";
     static final String FETCH_URL = "http://moneymoney.zapto.org:8080";
+    public String token;
+    public String emailEx;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //set auth0 client id and domain to know which will be same as the login
+        Auth0 auth0 = new Auth0(getString(R.string.auth0_client_id), getString(R.string.auth0_domain));
         //set the fragment initially
         MainFragment fragment = new MainFragment();
         android.support.v4.app.FragmentTransaction fragmentTransaction =
@@ -77,19 +85,18 @@ public class MainActivity extends AppCompatActivity
         //getting nav view header
         navigationView.setNavigationItemSelectedListener(this);
         //get header view in position 0 and then it will get the id from nav header textview
-        username = (TextView) navigationView.getHeaderView(0).findViewById(R.id.txtUsername);
+        //username = (TextView) navigationView.getHeaderView(0).findViewById(R.id.txtUsername);
         email = (TextView) navigationView.getHeaderView(0).findViewById(R.id.txtEmail);
-        //if I want a prof pic to be fetched too
-        //profPic = (ImageView) navigationView.getHeaderView(0).findViewById(R.id.profile_image);
 
-        //this needs to be changed to user's credential
-        //should be like username.setText(bundle.getCharSequence("name");
-        //if want to put prof pic then profPic.setProfileId();
-        username.setText("Shirin");
-        //this budle is to fetch username and email from the database for the extra intent from login
-        Bundle bundle = getIntent().getExtras();
-        String j = (String) bundle.get("EMAIL");
-        email.setText(j);
+        //get auth0 token and email from login activity
+        Intent intent = getIntent();
+        Bundle extras = intent.getExtras();
+        token = extras.getString("TOKEN");
+        Log.d("token", token);
+        emailEx = extras.getString("EMAIL");
+        Log.d("email_h", emailEx);
+        //set email headerview
+        email.setText(emailEx);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -97,9 +104,6 @@ public class MainActivity extends AppCompatActivity
         drawer.setDrawerListener(toggle);
         toggle.syncState();
     }
-
-
-
 
     @Override
     public void onBackPressed() {
@@ -129,7 +133,6 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.action_settings) {
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -286,11 +289,9 @@ public class MainActivity extends AppCompatActivity
             builder.setPositiveButton("Ok",new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    Intent intent = new Intent(getApplicationContext(),LoginActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(intent);
-                    //close this activity
-                    MainActivity.this.finish();
+                    CredentialsManager.deleteCredentials(getApplicationContext());
+                    startActivity(new Intent(getApplicationContext(), LoginActivity.class));
+                    finish();
                 }
             });
             builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
