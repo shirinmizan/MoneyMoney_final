@@ -2,6 +2,7 @@
 package com.example.shirin.navdrawe_1;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.graphics.Color;
 import android.icu.util.Calendar;
 import android.os.AsyncTask;
@@ -17,6 +18,8 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.Volley;
 import com.example.shirin.navdrawe_1.barchart.DemoBase;
 import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.PieChart;
@@ -36,8 +39,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -54,13 +62,8 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
     private static final String TAG_DESC = "desc";
     private static final String TAG_DATE = "date";
     private static final String TAG_SUCCESS = "success";
-    static final String FETCH_URL = "http://moneymoney.zapto.org:8080";
-
-    String amount = null;
-    String desc = null;
-    String type = null;
-    String date = null;
-    String category = null;
+    static final String FETCH_URL = "https://moneymoney.zapto.org/user/getDataAPI";
+    String desc, amount, type, category, date, token, accesstoken;
     ProgressDialog pDialog;
     float amt = (float)0.00;
     ArrayList<BarEntry> yVals1 = new ArrayList<BarEntry>();
@@ -75,23 +78,11 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_piechart);
-        /**spinType = (Spinner) findViewById(R.id.barType);
-        ArrayAdapter<CharSequence> adapterType =
-                ArrayAdapter.createFromResource(this.
-                        getBaseContext(), R.array.barArray, android.R.layout.simple_spinner_dropdown_item);
-        spinType.setAdapter(adapterType);
-        spinType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
 
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                new ChartTask().execute();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });**/
+        Intent intent = getIntent();
+        //Bundle extras = intent.getExtras();
+        token = intent.getStringExtra("TOKEN");
+        accesstoken = intent.getStringExtra("ACCESSTOKEN");
 
         new ChartTask().execute();
 
@@ -121,19 +112,11 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
         mChart.setRotationEnabled(true);
         mChart.setHighlightPerTapEnabled(true);
 
-        // mChart.setUnit(" €");
-        // mChart.setDrawUnitsInChart(true);
-
         // add a selection listener
         mChart.setOnChartValueSelectedListener(this);
 
-        //setData(4, 100);
-
         mChart.animateY(1400, Easing.EasingOption.EaseInOutQuad);
         // mChart.spin(2000, 0, 360);
-
-//        mSeekBarX.setOnSeekBarChangeListener(this);
-    //    mSeekBarY.setOnSeekBarChangeListener(this);
 
         Legend l = mChart.getLegend();
         l.setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
@@ -163,11 +146,6 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
 
     @Override
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-
-        //tvX.setText("" + (mSeekBarX.getProgress()));
-       // tvY.setText("" + (mSeekBarY.getProgress()));
-
-        //setData(mSeekBarX.getProgress(), mSeekBarY.getProgress());
     }
 
     private class ChartTask extends AsyncTask<String, String, String> {
@@ -189,6 +167,55 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
         }
         @Override
         protected String doInBackground(String... String) {
+            try {
+                RequestQueue queue = Volley.newRequestQueue(PieChartActivity.this);
+
+                URL url = new URL(FETCH_URL);
+                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setDoOutput(true);
+                //urlConnection.setInstanceFollowRedirects(true);
+                //urlConnection.setInstanceFollowRedirects(false);
+                urlConnection.setRequestMethod("POST");
+                urlConnection.setRequestProperty("Authorization", "Bearer " + accesstoken); //passing Auth0 idtoken
+                urlConnection.setRequestProperty("Content-Type", "application/json");
+                urlConnection.setRequestProperty("user_Id", token);
+                urlConnection.connect();
+                Log.d("connection", java.lang.String.valueOf((urlConnection)));
+
+                //sending JSONObject with token header
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("Authorization", "Bearer " + accesstoken);
+                jsonObject.put("Content-Type", "application/json");
+                jsonObject.put("user_Id", token);
+
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(urlConnection.getOutputStream()));
+                out.write(jsonObject.toString());
+                out.close();
+                int responsecode = urlConnection.getResponseCode();
+
+                Log.d("inbackRESPCode", java.lang.String.valueOf(responsecode));
+                if (responsecode == HttpURLConnection.HTTP_OK) {
+
+                    Log.d("inback", "ok code");
+                    BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        Log.d("thisisline", line);
+                        sb.append(line);
+                    }
+                    br.close();
+                    //Log.d("Sucessfully added", jsonObject.;
+                    return sb.toString();
+                }
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
             return null;
         }
         SimpleDateFormat readFormat = new SimpleDateFormat("EEEE, MMMM dd");
@@ -197,25 +224,10 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
         @RequiresApi(api = Build.VERSION_CODES.N)
         @Override
         protected void onPostExecute(String s) {
-
-            JSONObject obj = new JSONObject();
-
             super.onPostExecute(s);
-            // reading from file
-            StringBuffer sb = new StringBuffer();
-            BufferedReader br = null;
             try {
-                br = new BufferedReader(new InputStreamReader(getAssets().open("expenses.json")));
-                String temp;
-                while ((temp = br.readLine()) != null) {
-                    sb.append(temp);
-                }
-                br.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                JSONArray result = new JSONArray(sb.toString());
+
+                JSONArray result = new JSONArray(s);
                 JSONObject jsonObject = null;
                 for (int i = 0; i < result.length(); i++) {
                     jsonObject = result.getJSONObject(i);
@@ -235,36 +247,6 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
 
                     amt = Float.valueOf(amount.replace(",", ""));
 
-                    /**if (type.equalsIgnoreCase("income")) {
-                        sum += amt;  //get total income
-                        //nice now need to add date formatter
-                        if (category.equalsIgnoreCase("osap")) {
-                            sum1 += amt;
-                            result1 = (sum1 / sum) * 100;
-                            Log.d("osap", String.valueOf(result1));
-                        }
-                        if (category.equalsIgnoreCase("allowance")) {
-                            sum2 += amt;
-                            result2 = ((sum2 / sum) * 100);
-                            Log.d("osap", String.valueOf(result2));
-                        }
-                        if (category.equalsIgnoreCase("one time")) {
-                            sum3 += amt;
-                            result3 = (sum3 / sum) * 100;
-                            // Log.d("osap", result3);
-                        }
-                        if (category.equalsIgnoreCase("loan")) {
-                            sum4 += amt;
-                            result4 = (sum3 / sum) * 100;
-                            // Log.d("osap", result4);
-                        }
-                        if (category.equalsIgnoreCase("paycheque")) {
-                            sum5 += amt;
-                            result5 = (sum5 / sum) * 100;
-                            // Log.d("osap", result5);
-                        }
-
-                    }**/
                     if (type.equalsIgnoreCase("expense")) {
                            num += amt;  //get total income
                         //nice now need to add date formatter
@@ -352,18 +334,6 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
         }
     }
 
-        /*private SpannableString generateCenterSpannableText() {
-
-        SpannableString s = new SpannableString("Income");
-        s.setSpan(new RelativeSizeSpan(1.7f), 0, 14, 0);
-        s.setSpan(new StyleSpan(Typeface.NORMAL), 14, s.length() - 15, 0);
-        s.setSpan(new ForegroundColorSpan(Color.GRAY), 14, s.length() - 15, 0);
-        s.setSpan(new RelativeSizeSpan(.8f), 14, s.length() - 15, 0);
-        s.setSpan(new StyleSpan(Typeface.ITALIC), s.length() - 14, s.length(), 0);
-        s.setSpan(new ForegroundColorSpan(ColorTemplate.getHoloBlue()), s.length() - 14, s.length(), 0);
-        return s;
-    }*/
-
     @Override
     public void onValueSelected(Entry e, Highlight h) {
 
@@ -381,13 +351,11 @@ public class PieChartActivity extends DemoBase implements OnSeekBarChangeListene
 
     @Override
     public void onStartTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
 
     }
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
 
     }
 }
