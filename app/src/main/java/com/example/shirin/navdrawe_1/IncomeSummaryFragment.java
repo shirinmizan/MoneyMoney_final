@@ -1,6 +1,7 @@
 package com.example.shirin.navdrawe_1;
 
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -12,13 +13,18 @@ import android.widget.ExpandableListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.Volley;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -42,21 +48,27 @@ public class IncomeSummaryFragment extends Fragment {
     List<String> listDataHeader;
     TextView txtT;
     HashMap<String, List<String>> listDataChild;
-    static final String FETCH_URL = "http://moneymoney.zapto.org:8080";
+    static final String FETCH_URL = "https://moneymoney.zapto.org/user/getDataAPI";
     private static final String TAG_TYPE = "type";
     private static final String TAG_AMOUNT = "amount";
     private static final String TAG_CATEGORY = "category";
     private static final String TAG_DESC = "desc";
     private static final String TAG_DATE = "date";
     private static final String TAG_SUCCESS = "success";
-    String amount = null;
-    String desc = null;
-    String type = null;
-    String date = null;
-    String category = null;
+    String amount, desc, type, date, category, token, accesstoken;
 
     public IncomeSummaryFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Intent intent = getActivity().getIntent();
+        //Bundle extras = intent.getExtras();
+        token = intent.getStringExtra("TOKEN");
+        accesstoken = intent.getStringExtra("ACCESSTOKEN");
+        //Log.d("THETOKEN", token);
     }
 
     @Override
@@ -69,7 +81,8 @@ public class IncomeSummaryFragment extends Fragment {
         //txtT = (TextView) view.findViewById(R.id.txtBalance);
 
         // preparing list data
-        prepareListData();
+        //prepareListData();
+        new GetDataTask().execute();
 
         //new GetTransactionTask().execute();
 
@@ -138,39 +151,66 @@ public class IncomeSummaryFragment extends Fragment {
         return view;
     }
 
-    /**public class GetTransactionTask extends AsyncTask<String, String, String> {
+    //public void prepareListData() {
+    public class GetDataTask extends AsyncTask<String, String, String> {
+
         @Override
         protected String doInBackground(String... params) {
-            /**try {
+            try {
+                RequestQueue queue = Volley.newRequestQueue(getActivity());
+
                 URL url = new URL(FETCH_URL);
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
+                urlConnection.setDoOutput(true);
+                //urlConnection.setInstanceFollowRedirects(true);
+                //urlConnection.setInstanceFollowRedirects(false);
+                urlConnection.setRequestMethod("POST");
+                urlConnection.setRequestProperty("Authorization", "Bearer " + accesstoken); //passing Auth0 idtoken
+                urlConnection.setRequestProperty("Content-Type", "application/json");
+                urlConnection.setRequestProperty("user_Id", token);
                 urlConnection.connect();
+                Log.d("connection", String.valueOf(urlConnection));
 
+                //sending JSONObject with token header
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("Authorization", "Bearer " + accesstoken);
+                jsonObject.put("Content-Type", "application/json");
+                jsonObject.put("user_Id", token);
+
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(urlConnection.getOutputStream()));
+                out.write(jsonObject.toString());
+                out.close();
                 int responsecode = urlConnection.getResponseCode();
 
+                Log.d("inbackRESPCode", String.valueOf(responsecode));
                 if (responsecode == HttpURLConnection.HTTP_OK) {
+
+                    Log.d("inback", "ok code");
                     BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
                     StringBuilder sb = new StringBuilder();
                     String line;
                     while ((line = br.readLine()) != null) {
+                        Log.d("thisisline", line);
                         sb.append(line);
                     }
                     br.close();
+                    //Log.d("Sucessfully added", jsonObject.;
                     return sb.toString();
                 }
-            } catch (ProtocolException e) {
-                e.printStackTrace();
+
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
             return null;
-            return null;
-        }**/
+        }
 
-        public void prepareListData() {
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
             double amt = 0.0;
             double sum1 = 0.0;
             double sum2 = 0.0;
@@ -178,22 +218,9 @@ public class IncomeSummaryFragment extends Fragment {
             String result2 = null;
             double totalMoney;
             double balanceLeft;
-            //If reading from a local file
-            StringBuffer sb = new StringBuffer();
-            BufferedReader br = null;
-            try {
-                br = new BufferedReader(new InputStreamReader(getActivity().getAssets().open("expenses.json")));
-                String temp;
-                while ((temp = br.readLine()) != null) {
-                    sb.append(temp);
-                }
-                br.close();
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             try {
-                JSONArray result = new JSONArray(sb.toString());
+                JSONArray result = new JSONArray(s);
                 JSONObject jsonObject = null;
 
                 JSONObject newJSON = new JSONObject();
@@ -308,6 +335,7 @@ public class IncomeSummaryFragment extends Fragment {
             }
         }
     }
+}
 
 
 
