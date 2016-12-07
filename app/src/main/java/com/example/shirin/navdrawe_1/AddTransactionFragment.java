@@ -20,6 +20,7 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,6 +35,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.Volley;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -45,6 +49,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.sql.Date;
 import java.text.ParseException;
@@ -58,9 +64,10 @@ public class AddTransactionFragment extends Fragment {
     Spinner spinType, spinCatInc, spinCatExp;
     Button btnAdd;
     String desc, amount, type, category, date;
-    TextView responseView;
+    TextView setSpinnerError;
     ProgressBar progressBar;
     static final String INSERT_URL = "http://moneymoney.zapto.org:8080/insertDataAPI";
+    ArrayAdapter<CharSequence> adapterType;
 
     public String token;
     String accesstoken;
@@ -71,19 +78,16 @@ public class AddTransactionFragment extends Fragment {
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Intent intent = getActivity().getIntent();
+        //Bundle extras = intent.getExtras();
+        token = intent.getStringExtra("TOKEN");
+        accesstoken = intent.getStringExtra("ACCESSTOKEN");
+        Log.d("THETOKEN", token);
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_add_transaction, container, false);
-
-
-        //get the token from login
-        /**Intent intent = getActivity().getIntent();
-        intent.getStringExtra("TOKEN");
-        //Log.d("TOKEN");
-        token = intent.getStringExtra("TOKEN");
-        accesstoken = intent.getStringExtra("ACCESS");
-        Log.d("THETOKEN", token);**/
         return view;
     }
 
@@ -92,14 +96,14 @@ public class AddTransactionFragment extends Fragment {
         //setting all edittext and spinners
         edDesc = (EditText) view.findViewById(R.id.txtDesc);
         edAmt = (EditText) view.findViewById(R.id.txtAmt);
+        setSpinnerError = (TextView) view.findViewById(R.id.invisibleTextView);
         //spinner for type
         spinType = (Spinner) view.findViewById(R.id.spinnerType);
-        ArrayAdapter<CharSequence> adapterType =
+        adapterType =
                 ArrayAdapter.createFromResource(getActivity().
                         getBaseContext(), R.array.transaction_type, android.R.layout.simple_spinner_dropdown_item);
         spinType.setAdapter(adapterType);
         spinType.setSelection(spinType.getAdapter().getCount() - 1);
-
 
         //spinner for Income category
         spinCatInc = (Spinner) view.findViewById(R.id.spinnerCatInc);
@@ -162,10 +166,26 @@ public class AddTransactionFragment extends Fragment {
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(getActivity(),"Added Successfully",Toast.LENGTH_LONG).show();
+                if(TextUtils.isEmpty(desc)){
+                    edDesc.setError("This field cannot be empty");
+                }
+                if(TextUtils.isEmpty(amount)){
+                    edAmt.setError("Amount needed");
+                }
+                if(type.equalsIgnoreCase("Select Type") || category.equalsIgnoreCase("Select Category")){
+                    //do nothing
+                }
+                else{
+                    new AddDataTask().execute();
+                    edDesc.setText("");
+                    edAmt.setText("");
+                    edDate.setText("");
+                    spinType.setSelection(2);
+                    spinCatInc.setSelection(7);
+                    spinCatExp.setSelection(7);
+                }
             }
         });
-
 
         //for date picker
         edDate = (EditText) view.findViewById(R.id.txtDate);
@@ -178,7 +198,6 @@ public class AddTransactionFragment extends Fragment {
             }
         });
     }
-
     //show date picker method
     @RequiresApi(api = Build.VERSION_CODES.N)
     private void showDatePicker() {
@@ -215,78 +234,50 @@ public class AddTransactionFragment extends Fragment {
         }
     };
 
-    /**class RetrieveFeedTask extends AsyncTask<Void, Void, String> {
-        private Exception exception;
+    class AddDataTask extends AsyncTask<String, String, String> {
+        //private Exception exception;
         Context context;
         ProgressDialog loading;
 
-        @RequiresApi(api = Build.VERSION_CODES.N)
         protected void onPreExecute() {
             //UI thread
             desc = edDesc.getText().toString();
             amount = edAmt.getText().toString();
-            //get the date string from db
             date = edDate.getText().toString();
-            //read the format which was set in the date editText edDate
-            DateFormat readFormat = new SimpleDateFormat("MMMM dd, yyyy");
-            //write it in the db in a different format like Wednesday, July 12, 2016 12:00 PM
-            DateFormat writeFormat = new SimpleDateFormat("EEEE, MMMM dd, yyyy hh:mm aaa");
-            //initialize a java.util.Date object
-            java.util.Date dt = null;
-            try{
-                dt = readFormat.parse(date);  //parse the date string in the read format
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-            String formattedDate = "";   //to hold the formatted date
-            if(dt != null){
-                formattedDate = writeFormat.format(dt); //then write the formatted date in db
-            }
-            date = formattedDate;  //now date sring is the formatted date
-
             super.onPreExecute();
             //loading = ProgressDialog.show(getContext(), "Adding...", "Wait...", false, false);
         }
 
-        protected String doInBackground(Void... urls) {
+        protected String doInBackground(String...params) {
+
             String result = null;
             String data = null;
             // Do some validation here
 
             try {
+                RequestQueue queue = Volley.newRequestQueue(getActivity());  //HttP request with Volley
                 URL url = new URL(INSERT_URL);
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-
                 urlConnection.setDoOutput(true);
+                urlConnection.setRequestMethod("POST");
                 urlConnection.setRequestProperty("Authorization", "Bearer " + accesstoken); //passing Auth0 idtoken
                 urlConnection.setRequestProperty("Content-Type", "application/json");
                 urlConnection.setRequestProperty("user_Id", token);
-                urlConnection.setRequestMethod("POST");
                 urlConnection.connect();
-                /*urlConnection.setDoOutput(true);
-                urlConnection.setInstanceFollowRedirects(true);
-                urlConnection.setInstanceFollowRedirects(false);
-                urlConnection.setRequestMethod("POST");
-                urlConnection.setRequestProperty("Content-type", "application/json");
-                urlConnection.setRequestProperty("Accept", "application/json");
+                Log.d("connection", String.valueOf(urlConnection));
 
-                JSONObject jsonParam = new JSONObject();
-
-                //sending a JSONObject with the token header
+                //sending JSONObject with token header
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("Authorization", "Bearer " + accesstoken);
                 jsonObject.put("Content-Type", "application/json");
                 jsonObject.put("user_Id", token);
-                /**jsonParam.put("type", "income");
-                 jsonParam.put("amount", "$88.88");
-                 jsonParam.put("desc", "Test Shirin");
-                 jsonParam.put("date", "Friday, Octber 13");
+                //sending data as JSONObject to the server
+                jsonObject.put("type", type);
+                jsonObject.put("amount", amount);
+                jsonObject.put("desc", desc);
+                jsonObject.put("category", category);
+                jsonObject.put("date", date);
 
-                jsonParam.put("type", type);
-                jsonParam.put("amount", amount);
-                jsonParam.put("desc", desc);
-                jsonParam.put("category", category);
-                jsonParam.put("date", date);  //this will write the formatteDate in the db
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(urlConnection.getOutputStream()));
                 out.write(jsonObject.toString());
                 out.close();
@@ -294,7 +285,6 @@ public class AddTransactionFragment extends Fragment {
 
                 Log.d("inbackRESPCode", String.valueOf(responsecode));
                 if (responsecode == HttpURLConnection.HTTP_OK) {
-
                     Log.d("inback", "ok code");
                     BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
                     StringBuilder sb = new StringBuilder();
@@ -304,63 +294,32 @@ public class AddTransactionFragment extends Fragment {
                         sb.append(line);
                     }
                     br.close();
-                    Log.d("Sucessfully added", jsonParam.getString(sb.toString()));
                     return sb.toString();
                 }
-
-                /*OutputStream os = urlConnection.getOutputStream();
-                //BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-                //write JSON object to the output stream
-                os.write(jsonParam.toString().getBytes());
-
-                Log.d("Sucessfully added", jsonParam.toString());
-                //writer.close();
-                os.close();
-
-                //Read
-                BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream(), "UTF-8"));
-
-                String line = null;
-                StringBuilder sb = new StringBuilder();
-
-                while ((line = br.readLine()) != null) {
-                    sb.append(line);
-                }
-
-                br.close();
-                result = sb.toString();
-
-                Log.d("Success", result);
-
-            } catch (UnsupportedEncodingException e) {
+            } catch (ProtocolException e) {
+                e.printStackTrace();
+            } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            return result;
+            return null;
         }
-
         protected void onPostExecute(String s) {
-            //s = "Transaction added successfully";
-            //super.onPostExecute(s);
-           // loading.dismiss();
-
-           // Toast.makeText(getActivity(), s, Toast.LENGTH_LONG).show();
             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
             builder.setTitle("Success");
             builder.setMessage("Transaction Added Successfully");
             builder.setPositiveButton("Ok", null);
             builder.setCancelable(true);
             builder.show();
-            loading.dismiss();
         }
     }
-}**/
+}
 //use for set callback and set Arguments
 @SuppressLint("ValidFragment")
-public static class DatePickerFragment extends DialogFragment {
+class DatePickerFragment extends DialogFragment {
         DatePickerDialog.OnDateSetListener ondateSet;
         private int year, month, day;
 
@@ -384,7 +343,7 @@ public static class DatePickerFragment extends DialogFragment {
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             return new DatePickerDialog(getActivity(), ondateSet, year, month, day);
         }
-    }
 }
+
 
 
