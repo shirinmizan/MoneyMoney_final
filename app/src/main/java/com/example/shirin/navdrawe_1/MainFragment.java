@@ -16,13 +16,18 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.Volley;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -37,9 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 
 
-/**
- * A simple {@link Fragment} subclass.
- */
 public class MainFragment extends Fragment {
     String titleAdd = "Add Transaction";
     String titleMoney = "Money Money";
@@ -52,19 +54,25 @@ public class MainFragment extends Fragment {
     private static final String TAG_DESC = "desc";
     private static final String TAG_DATE = "date";
     private static final String TAG_SUCCESS = "success";
-    static final String FETCH_URL = "http://moneymoney.zapto.org:8080";
-
-    String amount = null;
-    String desc = null;
-    String type = null;
-    String date = null;
-    String category = null;
+    static final String FETCH_URL = "https://moneymoney.zapto.org/user/getDataAPI";
+    String amount, desc, type , date, category, token, accesstoken;
     ArrayList<HashMap<String, String>> arraylist;
 
     Button btn1, btn2, btn3, btn4, btn5;
 
     public MainFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        Intent intent = getActivity().getIntent();
+        //Bundle extras = intent.getExtras();
+        token = intent.getStringExtra("TOKEN");
+        accesstoken = intent.getStringExtra("ACCESSTOKEN");
+        //Log.d("THETOKEN", token);
     }
 
     @Override
@@ -96,21 +104,22 @@ public class MainFragment extends Fragment {
                 ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(titleAdd);
             }
         });
-        btn4.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                gotoBar();
-            }
+        /**btn4.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+        gotoBar();
+        }
         });
-        btn5.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                gotoPie();
+         btn5.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+        gotoPie();
 
-            }
-        });
+        }
+        });**/
 
-        prepareListData();
+        //prepareListData();
+        new GetDataTask().execute();
 
         return view;
     }
@@ -124,143 +133,157 @@ public class MainFragment extends Fragment {
         Intent intent = new Intent(getActivity(), PieChartActivity.class);
         startActivity(intent);
     }
+    public class GetDataTask extends AsyncTask<String, String, String> {
 
-    /**public class GetTransactionTask extends AsyncTask<String, String, String> {
         @Override
         protected String doInBackground(String... params) {
             try {
+                RequestQueue queue = Volley.newRequestQueue(getActivity());
+
                 URL url = new URL(FETCH_URL);
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
+                urlConnection.setDoOutput(true);
+                //urlConnection.setInstanceFollowRedirects(true);
+                //urlConnection.setInstanceFollowRedirects(false);
+                urlConnection.setRequestMethod("POST");
+                urlConnection.setRequestProperty("Authorization", "Bearer " + accesstoken); //passing Auth0 idtoken
+                urlConnection.setRequestProperty("Content-Type", "application/json");
+                urlConnection.setRequestProperty("user_Id", token);
                 urlConnection.connect();
+                Log.d("connection", String.valueOf(urlConnection));
 
+                //sending JSONObject with token header
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("Authorization", "Bearer " + accesstoken);
+                jsonObject.put("Content-Type", "application/json");
+                jsonObject.put("user_Id", token);
+
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(urlConnection.getOutputStream()));
+                out.write(jsonObject.toString());
+                out.close();
                 int responsecode = urlConnection.getResponseCode();
 
+                Log.d("inbackRESPCode", String.valueOf(responsecode));
                 if (responsecode == HttpURLConnection.HTTP_OK) {
+
+                    Log.d("inback", "ok code");
                     BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
                     StringBuilder sb = new StringBuilder();
                     String line;
                     while ((line = br.readLine()) != null) {
+                        Log.d("thisisline", line);
                         sb.append(line);
                     }
                     br.close();
+                    //Log.d("Sucessfully added", jsonObject.;
                     return sb.toString();
                 }
-            } catch (ProtocolException e) {
-                e.printStackTrace();
+
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
             return null;
-        }**/
-
-    public void prepareListData() {
-        double amt = 0.0;
-        double sum1 = 0.0;
-        double sum2 = 0.0;
-        String result1 = null;
-        String result2 = null;
-        double totalMoney;
-        double balanceLeft;
-        //If reading from a local file
-        StringBuffer sb = new StringBuffer();
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new InputStreamReader(getActivity().getAssets().open("expenses.json")));
-            String temp;
-            while ((temp = br.readLine()) != null) {
-                sb.append(temp);
-            }
-            br.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-        try {
-            JSONArray result = new JSONArray(sb.toString());
-            JSONObject jsonObject = null;
 
-            JSONObject newJSON = new JSONObject();
-            JSONObject newJSON1 = new JSONObject();
-            JSONObject newJson2 = new JSONObject();
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            double amt = 0.0;
+            double sum1 = 0.0;
+            double sum2 = 0.0;
+            String result1 = null;
+            String result2 = null;
+            double totalMoney;
+            double balanceLeft;
 
-            final ArrayList<Date> datearray = new ArrayList<Date>();
-            final DateFormat sdf = new SimpleDateFormat("EEEE, MMMM dd");
+            try {
 
-            for (int i = 0; i < result.length(); i++) {
-                jsonObject = result.getJSONObject(i);
-                amount = jsonObject.getString(TAG_AMOUNT);
-                amount = amount.replaceAll(",", "");
-                for (int k = 0; k < amount.length(); k++) {
-                    if ((amount == "") || amount.equalsIgnoreCase("m")) {
-                        return;
-                    } else {
-                        amt = Double.valueOf(amount);
+                //JSONArray result = null;
+                JSONArray result = new JSONArray(s);
+                JSONObject jsonObject = null;
+
+                JSONObject newJSON = new JSONObject();
+                JSONObject newJSON1 = new JSONObject();
+                //JSONObject newJson2 = new JSONObject();
+
+                final ArrayList<Date> datearray = new ArrayList<Date>();
+                final DateFormat sdf = new SimpleDateFormat("EEEE, MMMM dd");
+
+                for (int i = 0; i < result.length(); i++) {
+                    jsonObject = result.getJSONObject(i);
+                    amount = jsonObject.getString(TAG_AMOUNT);
+                    amount = amount.replaceAll(",", "");
+                    for (int k = 0; k < amount.length(); k++) {
+                        if ((amount == "") || amount.equalsIgnoreCase("m")) {
+                            return;
+                        } else {
+                            amt = Double.valueOf(amount);
+                        }
                     }
+                    desc = jsonObject.getString(TAG_DESC);
+                    type = jsonObject.getString(TAG_TYPE);
+                    //getting date as string from database
+                    date = jsonObject.getString(TAG_DATE);
+                    Date dt = sdf.parse(date);
+                    datearray.add(dt);
+
+                    category = jsonObject.getString(TAG_CATEGORY);
+
+                    //listDataChild.put(listDataHeader.get(0), descList);
+                    category = jsonObject.getString(TAG_CATEGORY);
+                    //creating a new JSON object to hold only corresponding types and amounts
+                    newJSON.put(type, amt);
+                    //Log.d("New ", String.valueOf(newJSON));
+                    //if type is income add all amount under it and then show total income
+                    if (type.equalsIgnoreCase("income")) {
+                        sum1 += amt;
+                        result1 = "Total Income: " + String.format("%.2f", sum1);
+                        btn2.setText(result1);
+                        Log.d("Total Income ", String.valueOf(sum1));
+                    }
+                    //show total expense
+                    else if (type.equalsIgnoreCase("expense")) {
+                        sum2 += amt;
+                        result2 = "Total Expense: " + String.format("%.2f", sum2);
+                        Log.d("Total Enpense ", String.valueOf(sum2));
+                        btn3.setText(result2);
+                        Log.d("Total Expense ", String.valueOf(sum2));
+                    } else {
+                        return;
+                    }
+                    //total money
+                    totalMoney = sum1 + sum2;
+                    String res = "Total: " + String.format("%.2f", totalMoney);
+                    //balance left
+                    balanceLeft = sum1 - sum2;
+                    String res2 = "Balance:" + String.format("%.2f", balanceLeft);
+
+                    Log.d("Total ", res);
+                    Log.d("Balance", res2);
+                    //set the total and balance textview text
+                    //total.setText(res);
+                    btn1.setText(res2);
                 }
-                desc = jsonObject.getString(TAG_DESC);
-                type = jsonObject.getString(TAG_TYPE);
-                //getting date as string from database
-                date = jsonObject.getString(TAG_DATE);
-                Date dt = sdf.parse(date);
-                datearray.add(dt);
 
-                category = jsonObject.getString(TAG_CATEGORY);
-
-                //List<String> descList = new ArrayList<String>();
-                //descList.add(desc);
-                //Log.d("Child", String.valueOf(descList));
-
-                //listDataChild.put(listDataHeader.get(0), descList);
-                category = jsonObject.getString(TAG_CATEGORY);
-                //creating a new JSON object to hold only corresponding types and amounts
-                newJSON.put(type, amt);
-                //Log.d("New ", String.valueOf(newJSON));
-                //if type is income add all amount under it and then show total income
-                if (type.equalsIgnoreCase("income")) {
-                    sum1 += amt;
-                    result1 = "Total Income: " + String.format("%.2f", sum1);
-                    btn2.setText(result1);
-                    Log.d("Total Income ", String.valueOf(sum1));
-                }
-                //show total expense
-                else if (type.equalsIgnoreCase("expense")) {
-                    sum2 += amt;
-                    result2 = "Total Expense: " + String.format("%.2f", sum2);
-                    Log.d("Total Enpense ", String.valueOf(sum2));
-                    btn3.setText(result2);
-                    Log.d("Total Expense ", String.valueOf(sum2));
-                } else {
-                    return;
-                }
-                //total money
-                totalMoney = sum1 + sum2;
-                String res = "Total: " + String.format("%.2f", totalMoney);
-                //balance left
-                balanceLeft = sum1 - sum2;
-                String res2 = "Balance:" + String.format("%.2f", balanceLeft);
-
-                Log.d("Total ", res);
-                Log.d("Balance", res2);
-                //set the total and balance textview text
-                //total.setText(res);
-                btn1.setText(res2);
-            }
-
-            //sort date in asceding order
+                //sort date in asceding order
                /* Collections.sort(datearray);
                 Log.d("sorted ascending", String.valueOf(datearray));*/
 
-            //sort date in descending order
-            Collections.sort(datearray, Collections.<Date>reverseOrder());
-            Log.d("sorted desceding", String.valueOf(datearray));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        } catch (ParseException e) {
-            e.printStackTrace();
+                //sort date in descending order
+                Collections.sort(datearray, Collections.<Date>reverseOrder());
+                Log.d("sorted desceding", String.valueOf(datearray));
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
         }
+
     }
 
     @Override
