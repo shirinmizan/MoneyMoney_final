@@ -3,6 +3,7 @@ package com.example.shirin.navdrawe_1;
 
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.graphics.RectF;
 import android.icu.util.Calendar;
 import android.os.AsyncTask;
@@ -23,6 +24,8 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.Volley;
 import com.example.shirin.navdrawe_1.barchart.DayAxisValueFormatter;
 import com.example.shirin.navdrawe_1.barchart.DemoBase;
 import com.example.shirin.navdrawe_1.barchart.MyAxisValueFormatter;
@@ -47,8 +50,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -72,17 +80,11 @@ public class MonthlyTrendFragment extends DemoBase implements SeekBar.OnSeekBarC
     private static final String TAG_DESC = "desc";
     private static final String TAG_DATE = "date";
     private static final String TAG_SUCCESS = "success";
-    static final String FETCH_URL = "http://moneymoney.zapto.org:8080";
-
-    String amount = null;
-    String desc = null;
-    String type = null;
-    String date = null;
-    String category = null;
+    static final String FETCH_URL = "https://moneymoney.zapto.org/user/getDataAPI";
+    String amount, desc, type , date, category, token, accesstoken;
     ProgressDialog pDialog;
     float amt = (float)0.00;
     ArrayList<BarEntry> yVals1 = new ArrayList<BarEntry>();
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +92,12 @@ public class MonthlyTrendFragment extends DemoBase implements SeekBar.OnSeekBarC
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.fragment_monthly_trend);
+
+        Intent intent = getIntent();
+        //Bundle extras = intent.getExtras();
+        token = intent.getStringExtra("TOKEN");
+        accesstoken = intent.getStringExtra("ACCESSTOKEN");
+        //Log.d("THETOKEN", token);
 
         spinType = (Spinner) findViewById(R.id.barType);
         ArrayAdapter<CharSequence> adapterType =
@@ -215,12 +223,12 @@ public class MonthlyTrendFragment extends DemoBase implements SeekBar.OnSeekBarC
 
     @Override
     public void onStartTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
+
     }
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
+
     }
     //private void setData(int count, float range) {
 
@@ -238,6 +246,55 @@ public class MonthlyTrendFragment extends DemoBase implements SeekBar.OnSeekBarC
 
         @Override
         protected String doInBackground(String... String) {
+            try{
+                RequestQueue queue = Volley.newRequestQueue(MonthlyTrendFragment.this);
+                URL url = new URL(FETCH_URL);
+                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setDoOutput(true);
+                //urlConnection.setInstanceFollowRedirects(true);
+                //urlConnection.setInstanceFollowRedirects(false);
+                urlConnection.setRequestMethod("POST");
+                urlConnection.setRequestProperty("Authorization", "Bearer " + accesstoken); //passing Auth0 idtoken
+                urlConnection.setRequestProperty("Content-Type", "application/json");
+                urlConnection.setRequestProperty("user_Id", token);
+                urlConnection.connect();
+                Log.d("connection", java.lang.String.valueOf(urlConnection));
+
+                //sending JSONObject with token header
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("Authorization", "Bearer " + accesstoken);
+                jsonObject.put("Content-Type", "application/json");
+                jsonObject.put("user_Id", token);
+
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(urlConnection.getOutputStream()));
+                out.write(jsonObject.toString());
+                out.close();
+                int responsecode = urlConnection.getResponseCode();
+
+                Log.d("inbackRESPCode", java.lang.String.valueOf(responsecode));
+                if (responsecode == HttpURLConnection.HTTP_OK) {
+
+                    Log.d("inback", "ok code");
+                    BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        Log.d("thisisline", line);
+                        sb.append(line);
+                    }
+                    br.close();
+                    //Log.d("Sucessfully added", jsonObject.;
+                    return sb.toString();
+                }
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
             return null;
         }
         SimpleDateFormat readFormat = new SimpleDateFormat("EEEE, MMMM dd");
@@ -246,25 +303,10 @@ public class MonthlyTrendFragment extends DemoBase implements SeekBar.OnSeekBarC
         @RequiresApi(api = Build.VERSION_CODES.N)
         @Override
         protected void onPostExecute(String s) {
-
-            JSONObject obj = new JSONObject();
-
             super.onPostExecute(s);
-            // reading from file
-            StringBuffer sb = new StringBuffer();
-            BufferedReader br = null;
+            JSONObject obj = new JSONObject();
             try {
-                br = new BufferedReader(new InputStreamReader(getAssets().open("expenses.json")));
-                String temp;
-                while ((temp = br.readLine()) != null) {
-                    sb.append(temp);
-                }
-                br.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                JSONArray result = new JSONArray(sb.toString());
+                JSONArray result = new JSONArray(s);
                 JSONObject jsonObject = null;
                 for (int i = 0; i < result.length(); i++) {
                     jsonObject = result.getJSONObject(i);
@@ -298,18 +340,7 @@ public class MonthlyTrendFragment extends DemoBase implements SeekBar.OnSeekBarC
                     if(type.equalsIgnoreCase("expense")){
                         yVals1.add(new BarEntry(i, amt));
                     }
-                    //HAVE TO DO SOMETHING WITH TIME
-
-                    //if(type.equalsIgnoreCase(""));
                 }
-
-                /** ArrayList<BarEntry> yVals1 = new ArrayList<BarEntry>();
-
-                 for (int i = (int) start; i < start + count + 1; i++) {
-                 float mult = (range + 1);
-                 float val = (float) (Math.random() * mult);
-                 yVals1.add(new BarEntry(i, val));
-                 }**/
 
                 BarDataSet set1;
 
